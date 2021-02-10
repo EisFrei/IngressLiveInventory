@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.3
+// @version 0.0.4
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -37,27 +37,27 @@ function wrapper(plugin_info) {
 		CAPSULE: 'Capsule',
 		DRONE: 'Drone',
 		EMITTER_A: 'Resonator',
-		EMP_BURSTER: 'Burster',
+		EMP_BURSTER: 'XMP',
 		EXTRA_SHIELD: 'Aegis Shield',
 		FLIP_CARD: 'Virus',
 		FORCE_AMP: 'Force Amp',
-		HEATSINK: 'Heatsink',
+		HEATSINK: 'HS',
 		INTEREST_CAPSULE: 'Quantum Capsule',
 		KEY_CAPSULE: 'Key Capsule',
 		KINETIC_CAPSULE: 'Kinetic Capsule',
-		LINK_AMPLIFIER: 'Link Amp',
+		LINK_AMPLIFIER: 'LA',
 		MEDIA: 'Media',
 		MULTIHACK: 'Multi-Hack',
 		PLAYER_POWERUP: 'Apex',
 		PORTAL_LINK_KEY: 'Key',
 		PORTAL_POWERUP: 'Fracker',
-		POWER_CUBE: 'Power Cube',
+		POWER_CUBE: 'PC',
 		RES_SHIELD: 'Shield',
 		TRANSMUTER_ATTACK: 'ITO -',
 		TRANSMUTER_DEFENSE: 'ITO +',
 		TURRET: 'Turret',
 		ULTRA_LINK_AMP: 'Ultra-Link',
-		ULTRA_STRIKE: 'Ultra-Strike',
+		ULTRA_STRIKE: 'US',
 
 	};
 
@@ -86,11 +86,20 @@ function wrapper(plugin_info) {
 
 
 	function addItemToCount(item, countMap, incBy) {
-		if (item[2] && item[2].resource && item[2].flipCard) {
+		if (item[2] && item[2].resource && item[2].timedPowerupResource) {
+			const key = `${item[2].resource.resourceType} ${item[2].timedPowerupResource.designation}`;
+			if (!countMap[key]) {
+				countMap[key] = item[2].resource;
+				countMap[key].count = 0;
+				countMap[key].type = `Powerup ${translations[item[2].timedPowerupResource.designation] || item[2].timedPowerupResource.designation}`;
+			}
+			countMap[key].count += incBy;
+		} else if (item[2] && item[2].resource && item[2].flipCard) {
 			const key = `${item[2].resource.resourceType} ${item[2].flipCard.flipCardType}`;
 			if (!countMap[key]) {
 				countMap[key] = item[2].resource;
 				countMap[key].count = 0;
+				countMap[key].type = `${translations[item[2].resource.resourceType]} ${item[2].flipCard.flipCardType}`;
 			}
 			countMap[key].flipCardType = item[2].flipCard.flipCardType;
 			countMap[key].count += incBy;
@@ -99,6 +108,7 @@ function wrapper(plugin_info) {
 			if (!countMap[key]) {
 				countMap[key] = item[2].resource;
 				countMap[key].count = 0;
+				countMap[key].type = `${translations[item[2].resource.resourceType]}`;
 			}
 			countMap[key].count += incBy;
 		} else if (item[2] && item[2].resourceWithLevels) {
@@ -106,6 +116,8 @@ function wrapper(plugin_info) {
 			if (!countMap[key]) {
 				countMap[key] = item[2].resourceWithLevels;
 				countMap[key].count = 0;
+				countMap[key].resourceRarity = 'COMMON';
+				countMap[key].type = `${translations[item[2].resourceWithLevels.resourceType]} ${item[2].resourceWithLevels.level}`;
 			}
 			countMap[key].count += incBy;
 		} else if (item[2] && item[2].modResource) {
@@ -113,6 +125,8 @@ function wrapper(plugin_info) {
 			if (!countMap[key]) {
 				countMap[key] = item[2].modResource;
 				countMap[key].count = 0;
+				countMap[key].type = `${translations[item[2].modResource.resourceType]}`;
+				countMap[key].resourceRarity = countMap[key].rarity;
 			}
 			countMap[key].count += incBy;
 		} else {
@@ -154,10 +168,10 @@ function wrapper(plugin_info) {
 		});
 		const countList = Object.values(countMap);
 		countList.sort((a, b) => {
-			if (a.resourceType === b.resourceType) {
+			if (a.type === b.type) {
 				return 0;
 			}
-			return a.resourceType > b.resourceType ? 1 : -1;
+			return a.type > b.type ? 1 : -1;
 		});
 		return countList;
 	}
@@ -210,46 +224,103 @@ function wrapper(plugin_info) {
 		return countList;
 	}
 
+	function getKeyTableBody(orderBy, direction) {
+		const sortFunctions = {
+			name: (a, b) => {
+				if (a.portalCoupler.portalTitle === b.portalCoupler.portalTitle) {
+					return 0;
+				}
+				return (a.portalCoupler.portalTitle.toLowerCase() > b.portalCoupler.portalTitle.toLowerCase() ? 1 : -1) * (direction ? 1 : -1);
+			},
+			count: (a, b) => (a.count - b.count) * (direction ? 1 : -1),
+			distance: (a, b) => (a._distance - b._distance) * (direction ? 1 : -1),
+			capsule: (a, b) => {
+				const sA = a.capsules.join(', ').toLowerCase();
+				const sB = b.capsules.join(', ').toLowerCase();
+				if (sA === sb) {
+					return 0;
+				}
+				return (sA > sB ? 1 : -1) * (direction ? 1 : -1);
+			}
+		}
+
+		thisPlugin.keyCount.sort(sortFunctions[orderBy]);
+		return thisPlugin.keyCount.map((el) => {
+			return `<tr>
+<td><a href="#" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}])">${el.portalCoupler.portalTitle}</a></td>
+<td>${el.count}</td>
+<td>${el._formattedDistance}</td>
+<td>${el.capsules.join(', ')}</td>
+</tr>`;
+		}).join('');
+	}
+
+	function updateKeyTableBody(orderBy, direction) {
+		$('#live-inventory-key-table tbody').empty().append($(getKeyTableBody(orderBy, direction)))
+	}
+
+
+	function getItemTableBody(orderBy, direction) {
+		const sortFunctions = {
+			type: (a, b) => {
+				if (a.type === b.type) {
+					return 0;
+				}
+				return (a.type.toLowerCase() > b.type.toLowerCase() ? 1 : -1) * (direction ? 1 : -1);
+			},
+			rarity: (a, b) => {
+				if (a.resourceRarity === b.resourceRarity) {
+					return 0;
+				}
+				return (a.resourceRarity.toLowerCase() > b.resourceRarity.toLowerCase() ? 1 : -1) * (direction ? 1 : -1);
+			},
+			count: (a, b) => (a.count - b.count) * (direction ? 1 : -1),
+		};
+
+
+		thisPlugin.itemCount.sort(sortFunctions[orderBy]);
+		return thisPlugin.itemCount.map((el) => {
+			return `<tr>
+<td>${el.type}</td>
+<td>${el.resourceRarity || ''}</td>
+<td>${el.count}</td>
+</tr>`;
+		}).join('');
+	}
+
+	function updateItemTableBody(orderBy, direction) {
+		$('#live-inventory-item-table tbody').empty().append($(getItemTableBody(orderBy, direction)))
+	}
+
+
 	function displayInventory() {
 		dialog({
 			html: `<div id="live-inventory">
-<table>
+<table id="live-inventory-item-table">
 <thead>
 <tr>
-<th class="">Type</th>
-<th class="">Rarity</th>
-<th class="">Count</th>
+<th class="" data-orderby="type">Type</th>
+<th class="" data-orderby="rarity">Rarity</th>
+<th class="" data-orderby="count">Count</th>
 </tr>
 </thead>
 <tbody>
-${thisPlugin.itemCount.map((el)=> {
-    return `<tr>
-<td>${translations[el.resourceType]}</td>
-<td>${el.flipCardType || el.resourceRarity || el.rarity || el.level}</td>
-<td>${el.count}</td>
-</tr>`;
-}).join('')}
+${getItemTableBody('type', 1)}
 </tbody>
 </table>
 <hr/>
-<table>
+
+<table id="live-inventory-key-table">
 <thead>
 <tr>
-<th class="">Portal</th>
-<th class="">Capsules</th>
-<th class="">Count</th>
+<th class="" data-orderby="name">Portal</th>
+<th class="" data-orderby="count">Count</th>
+<th class="" data-orderby="distance">Distance</th>
+<th class="" data-orderby="capsule">Capsules</th>
 </tr>
 </thead>
 <tbody>
-${thisPlugin.keyCount.map((el)=> {
-    return `<tr>
-<td><a href="#" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el.portalCoupler.portalLocation.split(',').map(e => {
-        return HexToSignedFloat(e);
-    }).join(',')}])">${el.portalCoupler.portalTitle}</a></td>
-<td>${el.capsules.join(', ')}</td>
-<td>${el.count}</td>
-</tr>`;
-}).join('')}
+${getKeyTableBody('name', 1)}
 </tbody>
 </table>
 </div>`,
@@ -257,6 +328,19 @@ ${thisPlugin.keyCount.map((el)=> {
 			id: 'live-inventory',
 			width: 'auto'
 		});
+
+		$('#live-inventory-key-table th').click(function () {
+			const orderBy = this.getAttribute('data-orderby');
+			this.orderDirection = !this.orderDirection;
+			updateKeyTableBody(orderBy, this.orderDirection);
+		});
+
+		$('#live-inventory-item-table th').click(function () {
+			const orderBy = this.getAttribute('data-orderby');
+			this.orderDirection = !this.orderDirection;
+			updateItemTableBody(orderBy, this.orderDirection);
+		});
+
 	};
 
 	function preparePortalKeyMap() {
@@ -267,10 +351,36 @@ ${thisPlugin.keyCount.map((el)=> {
 		return keyMap;
 	}
 
+	function formatDistance(dist) {
+		if (dist >= 10000) {
+			dist = Math.round(dist / 1000) + 'km';
+		} else if (dist >= 1000) {
+			dist = Math.round(dist / 100) / 10 + 'km';
+		} else {
+			dist = Math.round(dist) + 'm';
+		}
+
+		return dist;
+	}
+
+	function updateDistances() {
+		const center = window.map.getCenter();
+		thisPlugin.keyCount.forEach((k) => {
+			if (!k._latlng) {
+				k._latlng = L.latLng.apply(L, k.portalCoupler.portalLocation.split(',').map(e => {
+					return HexToSignedFloat(e);
+				}));
+			}
+			k._distance = k._latlng.distanceTo(center);
+			k._formattedDistance = formatDistance(k._distance);
+		});
+	}
+
 	function prepareData(data) {
 		thisPlugin.itemCount = prepareItemCounts(data);
 		thisPlugin.keyCount = prepareKeyCounts(data);
 		thisPlugin.keyMap = preparePortalKeyMap();
+		updateDistances();
 	}
 
 	function loadInventory() {
@@ -319,6 +429,10 @@ ${thisPlugin.keyCount.map((el)=> {
 		if (thisPlugin.keyMap && thisPlugin.keyMap[data.portal.options.guid] && !data.portal._keyMarker) {
 			data.portal._keyMarker = L.marker(data.portal._latlng, {
 				icon: thisPlugin.keyIcon,
+				/*icon: new L.DivIcon({
+				    html:thisPlugin.keyMap[data.portal.options.guid].count,
+				    className: 'plugin-live-inventory-count'
+				}),*/
 				interactive: false,
 				keyboard: false,
 			}).addTo(thisPlugin.layerGroup);
@@ -354,10 +468,30 @@ ${thisPlugin.keyCount.map((el)=> {
 			.text('Inventory')
 			.click(displayInventory)
 			.appendTo($('#toolbox'));
+
+		$("<style>")
+			.prop("type", "text/css")
+			.html(`.plugin-live-inventory-count {
+font-size: 10px;
+color: #FFFFBB;
+font-family: monospace;
+text-align: center;
+text-shadow: 0 0 1px black, 0 0 1em black, 0 0 0.2em black;
+pointer-events: none;
+-webkit-text-size-adjust:none;
+}
+#live-inventory th {
+background-color: rgb(27, 65, 94);
+cursor: pointer;
+}
+`)
+			.appendTo("head");
+
 		window.addHook('portalDetailsUpdated', portalDetailsUpdated);
 		window.addHook('portalAdded', addKeyToLayer);
 		window.addHook('portalRemoved', removeKeyFromLayer);
 		window.map.on('zoom', checkShowAllIcons);
+		window.map.on('moveend', updateDistances);
 	}
 
 	function delaySetup() {
