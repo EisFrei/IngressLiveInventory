@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.7
+// @version 0.0.8
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -438,7 +438,7 @@ Display mode
 				}, (data, textStatus, jqXHR) => {
 					localStorage[KEY_SETTINGS] = JSON.stringify({
 						data: data,
-						expires: Date.now() + 5 * 60 * 1000, // request data only once per five minutes, or we might hit a rate limit
+						expires: Date.now() + 10 * 60 * 1000, // request data only once per five minutes, or we might hit a rate limit
 						settings: settings
 					});
 					prepareData(data);
