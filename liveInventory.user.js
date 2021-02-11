@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.4
+// @version 0.0.5
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -247,7 +247,7 @@ function wrapper(plugin_info) {
 		thisPlugin.keyCount.sort(sortFunctions[orderBy]);
 		return thisPlugin.keyCount.map((el) => {
 			return `<tr>
-<td><a href="#" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}])">${el.portalCoupler.portalTitle}</a></td>
+<td><a href="//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}])">${el.portalCoupler.portalTitle}</a></td>
 <td>${el.count}</td>
 <td>${el._formattedDistance}</td>
 <td>${el.capsules.join(', ')}</td>
@@ -292,6 +292,15 @@ function wrapper(plugin_info) {
 		$('#live-inventory-item-table tbody').empty().append($(getItemTableBody(orderBy, direction)))
 	}
 
+	function exportItems() {
+		const str = ['Type\tRarity\tCount', ...thisPlugin.itemCount.map((i) => [i.type, i.resourceRarity, i.count].join('\t'))].join('\n');
+		navigator.clipboard.writeText(str);
+	}
+
+	function exportKeys() {
+		const str = ['Name\tLink\tGUID\tKeys', ...thisPlugin.keyCount.map((el) => [el.portalCoupler.portalTitle, `https//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}`, el.portalCoupler.portalGuid, el.count].join('\t'))].join('\n');
+		navigator.clipboard.writeText(str);
+	}
 
 	function displayInventory() {
 		dialog({
@@ -327,6 +336,12 @@ ${getKeyTableBody('name', 1)}
 			title: 'Live Inventory',
 			id: 'live-inventory',
 			width: 'auto'
+		}).dialog('option', 'buttons', {
+			'Export Items': exportItems,
+			'Export Keys': exportKeys,
+			'OK': function () {
+				$(this).dialog('close');
+			},
 		});
 
 		$('#live-inventory-key-table th').click(function () {
