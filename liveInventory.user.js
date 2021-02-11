@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.5
+// @version 0.0.6
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -247,7 +247,7 @@ function wrapper(plugin_info) {
 		thisPlugin.keyCount.sort(sortFunctions[orderBy]);
 		return thisPlugin.keyCount.map((el) => {
 			return `<tr>
-<td><a href="//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}])">${el.portalCoupler.portalTitle}</a></td>
+<td><a href="//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}]); return false;">${el.portalCoupler.portalTitle}</a></td>
 <td>${el.count}</td>
 <td>${el._formattedDistance}</td>
 <td>${el.capsules.join(', ')}</td>
@@ -305,6 +305,7 @@ function wrapper(plugin_info) {
 	function displayInventory() {
 		dialog({
 			html: `<div id="live-inventory">
+<div id="live-inventory-tables">
 <table id="live-inventory-item-table">
 <thead>
 <tr>
@@ -332,13 +333,15 @@ ${getItemTableBody('type', 1)}
 ${getKeyTableBody('name', 1)}
 </tbody>
 </table>
+</div>
+<div id="live-inventory-settings">Settings</div>
 </div>`,
 			title: 'Live Inventory',
 			id: 'live-inventory',
 			width: 'auto'
 		}).dialog('option', 'buttons', {
-			'Export Items': exportItems,
-			'Export Keys': exportKeys,
+			'Copy Items': exportItems,
+			'Copy Keys': exportKeys,
 			'OK': function () {
 				$(this).dialog('close');
 			},
