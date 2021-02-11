@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.6
+// @version 0.0.7
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -19,6 +19,9 @@ function wrapper(plugin_info) {
 	// and other plugins assume the same.
 	if (typeof window.plugin !== "function") window.plugin = function () {};
 	const KEY_SETTINGS = "plugin-live-inventory";
+	let settings = {
+		displayMode: 'icon',
+	};
 
 	window.plugin.LiveInventory = function () {};
 
@@ -334,11 +337,26 @@ ${getKeyTableBody('name', 1)}
 </tbody>
 </table>
 </div>
-<div id="live-inventory-settings">Settings</div>
+<div id="live-inventory-settings">
+<h2>Settings</h2>
+<label>
+<select id="live-inventory-settings--mode">
+<option value="icon" ${settings.displayMode === 'icon'?'selected':''}>Key icon</option>
+<option value="count" ${settings.displayMode === 'count'?'selected':''}>Number of keys</option>
+</select>
+Display mode
+</label>
+</div>
 </div>`,
 			title: 'Live Inventory',
 			id: 'live-inventory',
-			width: 'auto'
+			width: 'auto',
+			closeCallback: function () {
+				settings.displayMode = $('#live-inventory-settings--mode').val();
+				saveSettings();
+				removeAllIcons();
+				checkShowAllIcons();
+			}
 		}).dialog('option', 'buttons', {
 			'Copy Items': exportItems,
 			'Copy Keys': exportKeys,
@@ -404,7 +422,10 @@ ${getKeyTableBody('name', 1)}
 	function loadInventory() {
 		try {
 			const localData = JSON.parse(localStorage[KEY_SETTINGS]);
-			if (localData && localData.expires > Date.now()) {
+			if (localData && localData.settings) {
+				settings = localData.settings;
+			}
+			if (localData && localData.expires > Date.now() && localData.data) {
 				prepareData(localData.data);
 				return;
 			}
@@ -417,7 +438,8 @@ ${getKeyTableBody('name', 1)}
 				}, (data, textStatus, jqXHR) => {
 					localStorage[KEY_SETTINGS] = JSON.stringify({
 						data: data,
-						expires: Date.now() + 5 * 60 * 1000 // request data only once per five minutes, or we might hit a rate limit
+						expires: Date.now() + 5 * 60 * 1000, // request data only once per five minutes, or we might hit a rate limit
+						settings: settings
 					});
 					prepareData(data);
 				}, (data, textStatus, jqXHR) => {
@@ -426,6 +448,17 @@ ${getKeyTableBody('name', 1)}
 			}
 		});
 	};
+
+	function saveSettings() {
+		const ls = {};
+		try {
+			const localData = JSON.parse(localStorage[KEY_SETTINGS]);
+			ls.data = localData.data;
+			ls.expires = localData.expires;
+		} catch (e) {}
+		ls.settings = settings;
+		localStorage[KEY_SETTINGS] = JSON.stringify(ls);
+	}
 
 	function portalDetailsUpdated(p) {
 		if (!thisPlugin.keyMap) {
@@ -445,12 +478,15 @@ ${getKeyTableBody('name', 1)}
 		}
 
 		if (thisPlugin.keyMap && thisPlugin.keyMap[data.portal.options.guid] && !data.portal._keyMarker) {
+			let icon = thisPlugin.keyIcon;
+			if (settings.displayMode === 'count') {
+				icon = new L.DivIcon({
+					html: thisPlugin.keyMap[data.portal.options.guid].count,
+					className: 'plugin-live-inventory-count'
+				});
+			}
 			data.portal._keyMarker = L.marker(data.portal._latlng, {
-				icon: thisPlugin.keyIcon,
-				/*icon: new L.DivIcon({
-				    html:thisPlugin.keyMap[data.portal.options.guid].count,
-				    className: 'plugin-live-inventory-count'
-				}),*/
+				icon: icon,
 				interactive: false,
 				keyboard: false,
 			}).addTo(thisPlugin.layerGroup);
@@ -464,13 +500,17 @@ ${getKeyTableBody('name', 1)}
 		}
 	}
 
-	function checkShowAllIcons(data) {
+	function removeAllIcons() {
+		thisPlugin.layerGroup.clearLayers();
+		for (let id in window.portals) {
+			delete window.portals[id]._keyMarker;
+		}
+	}
+
+	function checkShowAllIcons() {
 		const tileParams = window.getCurrentZoomTileParameters ? window.getCurrentZoomTileParameters() : window.getMapZoomTileParameters();
 		if (tileParams.level !== 0) {
-			thisPlugin.layerGroup.clearLayers();
-			for (let id in window.portals) {
-				delete window.portals[id]._keyMarker;
-			}
+			removeAllIcons();
 		} else {
 			for (let id in window.portals) {
 				addKeyToLayer({
@@ -501,6 +541,12 @@ pointer-events: none;
 #live-inventory th {
 background-color: rgb(27, 65, 94);
 cursor: pointer;
+}
+#live-inventory-settings {
+margin-top: 2em;
+}
+#live-inventory-settings h2{
+line-height: 2em;
 }
 `)
 			.appendTo("head");
