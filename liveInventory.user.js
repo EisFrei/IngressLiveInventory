@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.8
+// @version 0.0.9
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @homepageURL	https://github.com/EisFrei/IngressLiveInventory
@@ -240,7 +240,7 @@ function wrapper(plugin_info) {
 			capsule: (a, b) => {
 				const sA = a.capsules.join(', ').toLowerCase();
 				const sB = b.capsules.join(', ').toLowerCase();
-				if (sA === sb) {
+				if (sA === sB) {
 					return 0;
 				}
 				return (sA > sB ? 1 : -1) * (direction ? 1 : -1);
