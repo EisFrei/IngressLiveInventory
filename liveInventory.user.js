@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.10
+// @version 0.0.11
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @updateURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
@@ -62,7 +62,6 @@ function wrapper(plugin_info) {
 		TURRET: 'Turret',
 		ULTRA_LINK_AMP: 'Ultra-Link',
 		ULTRA_STRIKE: 'US',
-
 	};
 
 	function checkSubscription(callback) {
@@ -136,6 +135,17 @@ function wrapper(plugin_info) {
 		} else {
 			console.log(item);
 		}
+	}
+
+	function parseCapsuleNames(str) {
+		const reg = new RegExp(/^([0-9a-f]{8}):(.+)$/, 'i');
+		str = str || '';
+		const map = {};
+		const rows = str.split('\n')
+			.map(e => reg.exec(e))
+			.filter(e => e && e.length === 3)
+			.forEach(e => map[e[1]] = e[2]);
+		return map;
 	}
 
 	function svgToIcon(str, s) {
@@ -229,6 +239,8 @@ function wrapper(plugin_info) {
 	}
 
 	function getKeyTableBody(orderBy, direction) {
+		const capsuleNames = parseCapsuleNames(settings.capsuleNames);
+
 		const sortFunctions = {
 			name: (a, b) => {
 				if (a.portalCoupler.portalTitle === b.portalCoupler.portalTitle) {
@@ -254,7 +266,7 @@ function wrapper(plugin_info) {
 <td><a href="//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}" onclick="zoomToAndShowPortal('${el.portalCoupler.portalGuid}',[${el._latlng.lat},${el._latlng.lng}]); return false;">${el.portalCoupler.portalTitle}</a></td>
 <td>${el.count}</td>
 <td>${el._formattedDistance}</td>
-<td>${el.capsules.join(', ')}</td>
+<td>${el.capsules.map(e => capsuleNames[e] || e).join(', ')}</td>
 </tr>`;
 		}).join('');
 	}
@@ -302,7 +314,8 @@ function wrapper(plugin_info) {
 	}
 
 	function exportKeys() {
-		const str = ['Name\tLink\tGUID\tKeys', ...thisPlugin.keyCount.map((el) => [el.portalCoupler.portalTitle, `https//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}`, el.portalCoupler.portalGuid, el.count].join('\t'))].join('\n');
+		const capsuleNames = parseCapsuleNames(settings.capsuleNames);
+		const str = ['Name\tLink\tGUID\tKeys\tCapsules', ...thisPlugin.keyCount.map((el) => [el.portalCoupler.portalTitle, `https//intel.ingress.com/?pll=${el._latlng.lat},${el._latlng.lng}`, el.portalCoupler.portalGuid, el.count, el.capsules.map(e => capsuleNames[e] || e).join(',')].join('\t'))].join('\n');
 		navigator.clipboard.writeText(str);
 	}
 
@@ -338,6 +351,7 @@ ${getKeyTableBody('name', 1)}
 </tbody>
 </table>
 </div>
+<hr/>
 <div id="live-inventory-settings">
 <h2>Settings</h2>
 <label>
@@ -347,6 +361,8 @@ ${getKeyTableBody('name', 1)}
 </select>
 Display mode
 </label>
+<h3>Capsule names</h3>
+<textarea id="live-inventory-settings--capsule-names" placeholder="CAPSULEID:Display name">${settings.capsuleNames || ''}</textarea>
 </div>
 </div>`,
 			title: 'Live Inventory',
@@ -354,6 +370,7 @@ Display mode
 			width: 'auto',
 			closeCallback: function () {
 				settings.displayMode = $('#live-inventory-settings--mode').val();
+				settings.capsuleNames = $('#live-inventory-settings--capsule-names').val();
 				saveSettings();
 				removeAllIcons();
 				checkShowAllIcons();
@@ -548,6 +565,10 @@ margin-top: 2em;
 }
 #live-inventory-settings h2{
 line-height: 2em;
+}
+#live-inventory-settings--capsule-names{
+min-height: 200px;
+min-width: 400px;
 }
 `)
 			.appendTo("head");
