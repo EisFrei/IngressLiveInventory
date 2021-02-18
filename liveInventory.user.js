@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.11
+// @version 0.0.12
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @updateURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
@@ -482,9 +482,10 @@ Display mode
 		if (!thisPlugin.keyMap) {
 			return;
 		}
+		const capsuleNames = parseCapsuleNames(settings.capsuleNames);
 		const countData = thisPlugin.keyMap[p.guid];
 		if (countData) {
-			$(`<tr><td>${countData.count}</td><th>Keys</th><th></th><td></td></tr>`)
+			$(`<tr class="randdetails-keys"><td>${countData.count}</td><th>Keys</th><th>Capsules</th><td class="randdetails-capsules">${countData.capsules.map(e => capsuleNames[e] || e).join(', ')}</td></tr>`)
 				.appendTo($('#randdetails tbody'));
 		}
 	}
@@ -569,6 +570,13 @@ line-height: 2em;
 #live-inventory-settings--capsule-names{
 min-height: 200px;
 min-width: 400px;
+}
+#randdetails td.randdetails-capsules {
+white-space: normal;
+}
+#randdetails .randdetails-keys td,
+#randdetails .randdetails-keys th {
+vertical-align: top;
 }
 `)
 			.appendTo("head");
