@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.12
+// @version 0.0.13
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @updateURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
@@ -399,6 +399,9 @@ Display mode
 
 	function preparePortalKeyMap() {
 		const keyMap = {};
+        if (!thisPlugin.keyCount) {
+            return;
+        }
 		thisPlugin.keyCount.forEach((k) => {
 			keyMap[k.portalCoupler.portalGuid] = k;
 		});
@@ -419,6 +422,9 @@ Display mode
 
 	function updateDistances() {
 		const center = window.map.getCenter();
+        if (!thisPlugin.keyCount) {
+            return;
+        }
 		thisPlugin.keyCount.forEach((k) => {
 			if (!k._latlng) {
 				k._latlng = L.latLng.apply(L, k.portalCoupler.portalLocation.split(',').map(e => {
