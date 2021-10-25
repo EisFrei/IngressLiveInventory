@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.13
+// @version 0.0.14
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @updateURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
@@ -399,9 +399,9 @@ Display mode
 
 	function preparePortalKeyMap() {
 		const keyMap = {};
-        if (!thisPlugin.keyCount) {
-            return;
-        }
+		if (!thisPlugin.keyCount) {
+			return;
+		}
 		thisPlugin.keyCount.forEach((k) => {
 			keyMap[k.portalCoupler.portalGuid] = k;
 		});
@@ -422,9 +422,9 @@ Display mode
 
 	function updateDistances() {
 		const center = window.map.getCenter();
-        if (!thisPlugin.keyCount) {
-            return;
-        }
+		if (!thisPlugin.keyCount) {
+			return;
+		}
 		thisPlugin.keyCount.forEach((k) => {
 			if (!k._latlng) {
 				k._latlng = L.latLng.apply(L, k.portalCoupler.portalLocation.split(',').map(e => {
@@ -545,12 +545,26 @@ Display mode
 		}
 	}
 
+
+	thisPlugin.onPaneChanged = function (pane) {
+		if (pane === "plugin-liveinventory")
+			displayInventory();
+		else
+			$("#live-inventory").remove()
+	};
+
 	function setup() {
 		loadInventory();
-		$('<a href="#">')
-			.text('Inventory')
-			.click(displayInventory)
-			.appendTo($('#toolbox'));
+
+		if (window.useAndroidPanes()) {
+			android.addPane("plugin-liveinventory", "Live Inventory", "ic_action_paste");
+			addHook("paneChanged", thisPlugin.onPaneChanged);
+		} else {
+			$('<a href="#">')
+				.text('Inventory')
+				.click(displayInventory)
+				.appendTo($('#toolbox'));
+		}
 
 		$("<style>")
 			.prop("type", "text/css")
