@@ -2,7 +2,7 @@
 // @id liveInventory
 // @name IITC Plugin: Live Inventory
 // @category Info
-// @version 0.0.14
+// @version 0.0.15
 // @namespace	https://github.com/EisFrei/IngressLiveInventory
 // @downloadURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
 // @updateURL	https://github.com/EisFrei/IngressLiveInventory/raw/main/liveInventory.user.js
@@ -65,26 +65,10 @@ function wrapper(plugin_info) {
 	};
 
 	function checkSubscription(callback) {
-		var versionStr = niantic_params.CURRENT_VERSION;
-		var post_data = JSON.stringify({
-			v: versionStr
-		});
-
-		var result = $.ajax({
-			url: '/r/getHasActiveSubscription',
-			type: 'POST',
-			data: post_data,
-			context: {},
-			dataType: 'json',
-			success: [(data) => callback(null, data)],
-			error: [(data) => callback(data)],
-			contentType: 'application/json; charset=utf-8',
-			beforeSend: function (req) {
-				req.setRequestHeader('accept', '*/*');
-				req.setRequestHeader('X-CSRFToken', readCookie('csrftoken'));
-			}
-		});
-		return result;
+		return window.postAjax('getHasActiveSubscription', {},
+			(data) => callback(null, data),
+			(data) => callback(data)
+		);
 	}
 
 
